@@ -1,0 +1,9 @@
+{
+  "name": "haya-house-backend",
+  "version": "1.0.0",
+  "description": "Backend API for Haya House e-commerce store",
+  "dependencies": {
+    "mongoose": "^8.6.0",
+    "razorpay": "^2.9.4"
+  }
+}
