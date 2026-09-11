@@ -439,7 +439,7 @@
 </div>
 
 <footer>
-  Haya House — Demo Store · This is a sample e-commerce artifact that can be made production-ready with a real backend, database, and payment gateway.
+  Haya House — Fashion, delivered to your door.
 </footer>
 
 <!-- CART BOTTOM SHEET -->
@@ -603,26 +603,22 @@ function genProducts(count){
   return arr;
 }
 
-/* Show local demo products immediately so the store is never empty while
-   loading, then fetch real products from the backend and merge them in. */
+/* Fetch real products from the backend. Only fall back to local demo
+   products if the backend is genuinely unreachable (e.g. still being set up) —
+   once connected, the store shows only real products, even if that's zero. */
 async function loadProducts(){
-  PRODUCTS = genProducts(120);
-  renderCatNav();
-  renderLatestStrip();
-  renderProducts();
-
   try{
     const res = await fetch('/api/products');
     if(!res.ok) throw new Error('API not available');
     const dbProducts = await res.json();
-    const mapped = dbProducts.map(p => ({
+    PRODUCTS = dbProducts.map(p => ({
       id: p._id, name: p.name, category: p.category,
       price: p.price, mrp: p.mrp || Math.round(p.price*1.3),
       img: p.imageUrl, video: p.videoUrl, fromDb: true
     }));
-    PRODUCTS = [...mapped, ...PRODUCTS];
   } catch(e){
-    console.warn('Backend not connected yet — showing local demo products only.', e.message);
+    console.warn('Backend not reachable — showing local demo products as a fallback.', e.message);
+    PRODUCTS = genProducts(24);
   }
   renderCatNav();
   renderLatestStrip();
@@ -680,6 +676,18 @@ function renderProducts(){
   const filtered = getFiltered();
   const grid = document.getElementById('productGrid');
   const slice = filtered.slice(0, visibleCount);
+
+  if(PRODUCTS.length === 0){
+    grid.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:50px 20px; color:#8a7680;">
+      <div style="font-size:2rem; margin-bottom:10px;">👗</div>
+      <p style="font-weight:600; color:var(--aubergine); margin-bottom:6px;">No dresses added yet</p>
+      <p style="font-size:0.85rem;">Tap the + button below to add your first dress to the store.</p>
+    </div>`;
+    document.getElementById('resultCount').textContent = '';
+    document.getElementById('loadMoreBtn').style.display = 'none';
+    return;
+  }
+
   grid.innerHTML = slice.map(p=>{
     const off = Math.round((1 - p.price/p.mrp)*100);
     return `
