@@ -15,9 +15,21 @@
     --clay:#A892C8;
     --lilac:#E6D8E8;
     --line:rgba(90,75,122,0.18);
+    --card-bg:#ffffff;
     --font-display:'Fraunces', serif;
     --font-body:'Inter', sans-serif;
   }
+  body.dark-mode{
+    --ink:#F0E9EC;
+    --aubergine:#C9B1D9;
+    --ivory:#1E1622;
+    --gold:#A892C8;
+    --clay:#C9B1D9;
+    --lilac:#3A2D40;
+    --line:rgba(201,177,217,0.22);
+    --card-bg:#2A1F30;
+  }
+  body{transition:background-color .25s ease, color .25s ease;}
   *{box-sizing:border-box; margin:0; padding:0;}
   body{
     font-family:var(--font-body);
@@ -44,7 +56,7 @@
   }
   .top-bar-search{
     display:flex; align-items:center; gap:8px;
-    background:#fff; border:1px solid var(--line);
+    background:var(--card-bg); border:1px solid var(--line);
     border-radius:20px; padding:7px 14px;
     max-width:280px;
   }
@@ -143,7 +155,7 @@
     display:flex; align-items:center; gap:14px;
     padding:16px 20px; margin-top:2px;
   }
-  .qr-strip img{width:56px; height:56px; border:1px solid var(--line); padding:3px; background:#fff;}
+  .qr-strip img{width:56px; height:56px; border:1px solid var(--line); padding:3px; background:var(--card-bg);}
   .qr-strip-text b{display:block; font-size:0.88rem; color:var(--aubergine);}
   .qr-strip-text span{font-size:0.78rem; color:#6b5a64;}
 
@@ -182,7 +194,7 @@
     gap:20px; padding:0 20px 20px;
   }
   .card{
-    background:#fff;
+    background:var(--card-bg);
     border:1px solid var(--line);
     display:flex; flex-direction:column;
     transition:box-shadow .15s ease;
@@ -213,7 +225,7 @@
     padding:3px 8px; border-radius:10px;
   }
   .form-row select{
-    width:100%; padding:10px 12px; border:1px solid var(--line); font-family:inherit; font-size:0.9rem; outline:none; background:#fff;
+    width:100%; padding:10px 12px; border:1px solid var(--line); font-family:inherit; font-size:0.9rem; outline:none; background:var(--card-bg);
   }
   .card-body{padding:12px 14px 14px; display:flex; flex-direction:column; gap:4px; flex:1;}
   .card-cat{font-size:0.7rem; text-transform:uppercase; letter-spacing:0.5px; color:var(--clay); font-weight:600;}
@@ -286,7 +298,7 @@
   }
   .modal.show{display:flex;}
   .modal-box{
-    background:#fff; max-width:420px; width:100%;
+    background:var(--card-bg); max-width:420px; width:100%;
     padding:26px; max-height:90vh; overflow-y:auto;
   }
   .modal-box h3{font-family:var(--font-display); color:var(--aubergine); font-size:1.3rem; margin-bottom:16px;}
@@ -305,14 +317,14 @@
   .pay-tabs{display:flex; gap:6px; margin:16px 0 14px;}
   .pay-tab{
     flex:1; padding:9px 4px; font-size:0.68rem; font-weight:600;
-    border:1px solid var(--line); background:#fff; color:var(--ink);
+    border:1px solid var(--line); background:var(--card-bg); color:var(--ink);
     border-radius:16px; text-align:center;
   }
   .pay-tab.active{background:var(--aubergine); color:#fff; border-color:var(--aubergine);}
   .upi-box{
     background:var(--lilac); padding:18px; text-align:center; margin-bottom:14px;
   }
-  .upi-box img{width:180px; height:180px; margin:0 auto 10px; background:#fff; padding:8px;}
+  .upi-box img{width:180px; height:180px; margin:0 auto 10px; background:var(--card-bg); padding:8px;}
   .upi-amount{font-family:var(--font-display); font-size:1.3rem; font-weight:600; color:var(--aubergine);}
   .upi-id-text{font-size:0.78rem; color:#6b5a64; margin-top:2px;}
   .upi-hint{font-size:0.78rem; color:#5c4a56; margin-top:10px; line-height:1.4;}
@@ -507,6 +519,11 @@
     <div style="display:flex; gap:10px; justify-content:center;">
       <button class="pay-tab" id="langEn" onclick="setLanguage('en')" style="flex:0 0 auto; padding:10px 24px;">English</button>
       <button class="pay-tab" id="langHi" onclick="setLanguage('hi')" style="flex:0 0 auto; padding:10px 24px;">हिंदी</button>
+    </div>
+    <p style="font-size:0.85rem;color:#6b5a64;margin:22px 0 16px;" data-i18n="theme_label">Choose appearance</p>
+    <div style="display:flex; gap:10px; justify-content:center;">
+      <button class="pay-tab" id="themeLight" onclick="setTheme('light')" style="flex:0 0 auto; padding:10px 24px;">☀️ <span data-i18n="light_mode">Light</span></button>
+      <button class="pay-tab" id="themeDark" onclick="setTheme('dark')" style="flex:0 0 auto; padding:10px 24px;">🌙 <span data-i18n="dark_mode">Dark</span></button>
     </div>
   </div>
 </div>
@@ -880,6 +897,7 @@ function openSettings(){
   document.getElementById('overlay').classList.add('show');
   document.getElementById('settingsModal').classList.add('show');
   updateLangButtons();
+  updateThemeButtons();
 }
 function openAddProduct(){
   populateCategorySelect();
@@ -924,6 +942,9 @@ const translations = {
     dress_video: "Dress Video (optional)",
     settings_title: "Settings",
     language_label: "Choose your language",
+    theme_label: "Choose appearance",
+    light_mode: "Light",
+    dark_mode: "Dark",
   },
   hi: {
     search_ph: "ड्रेस, साड़ी, कुर्ती खोजें...",
@@ -952,6 +973,9 @@ const translations = {
     dress_video: "ड्रेस वीडियो (वैकल्पिक)",
     settings_title: "सेटिंग्स",
     language_label: "अपनी भाषा चुनें",
+    theme_label: "थीम चुनें",
+    light_mode: "लाइट",
+    dark_mode: "डार्क",
   }
 };
 
@@ -976,6 +1000,19 @@ function setLanguage(lang){
 function updateLangButtons(){
   document.getElementById('langEn').classList.toggle('active', currentLang==='en');
   document.getElementById('langHi').classList.toggle('active', currentLang==='hi');
+}
+
+/* ---------- THEME (DARK / LIGHT) ---------- */
+let currentTheme = 'light';
+function setTheme(theme){
+  currentTheme = theme;
+  document.body.classList.toggle('dark-mode', theme === 'dark');
+  updateThemeButtons();
+  try{ localStorage.setItem('hayaHouseTheme', theme); }catch(e){}
+}
+function updateThemeButtons(){
+  document.getElementById('themeLight').classList.toggle('active', currentTheme==='light');
+  document.getElementById('themeDark').classList.toggle('active', currentTheme==='dark');
 }
 
 /* ---------- ADD YOUR OWN DRESS ---------- */
@@ -1316,6 +1353,8 @@ document.getElementById('searchInput').addEventListener('input', (e)=>{
 try{
   const savedLang = localStorage.getItem('hayaHouseLang');
   if(savedLang === 'hi') { setLanguage('hi'); }
+  const savedTheme = localStorage.getItem('hayaHouseTheme');
+  if(savedTheme === 'dark') { setTheme('dark'); }
 }catch(e){}
 renderCatNav();
 setupQR();
