@@ -331,7 +331,7 @@
 
   /* ADD DRESS FAB */
   .add-fab{
-    position:fixed; bottom:24px; right:24px; z-index:80;
+    position:fixed; bottom:80px; right:20px; z-index:80;
     background:var(--aubergine); color:#fff;
     width:56px; height:56px; border-radius:50%;
     display:flex; align-items:center; justify-content:center;
@@ -339,6 +339,30 @@
     box-shadow:0 6px 18px rgba(90,75,122,0.4);
   }
   .file-hint{font-size:0.72rem; color:#8a7680; margin-top:4px;}
+
+  /* BOTTOM NAV BAR */
+  body{padding-bottom:64px;}
+  .bottom-nav{
+    position:fixed; left:0; right:0; bottom:0; z-index:70;
+    background:var(--card-bg);
+    border-top:1px solid var(--line);
+    display:flex; justify-content:space-around; align-items:center;
+    padding:8px 4px calc(8px + env(safe-area-inset-bottom));
+  }
+  .bn-item{
+    display:flex; flex-direction:column; align-items:center; gap:2px;
+    color:#9a8790; font-size:0.68rem; font-weight:600;
+    flex:1; position:relative;
+  }
+  .bn-item .bn-icon{font-size:1.3rem; line-height:1;}
+  .bn-item.active{color:var(--aubergine);}
+  .bn-badge{
+    position:absolute; top:-4px; right:22%;
+    background:var(--aubergine); color:#fff;
+    font-size:0.6rem; font-weight:700;
+    width:16px; height:16px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+  }
 
   /* IMAGE/VIDEO VIEWER MODAL */
   .viewer-modal{
@@ -481,6 +505,27 @@
 <footer>
   Haya House — Fashion, delivered to your door.
 </footer>
+
+<!-- BOTTOM NAV BAR -->
+<div class="bottom-nav">
+  <a class="bn-item active" href="#" onclick="window.scrollTo({top:0,behavior:'smooth'}); return false;">
+    <span class="bn-icon">🏠</span>
+    <span data-i18n="nav_home">Home</span>
+  </a>
+  <a class="bn-item" href="#shop">
+    <span class="bn-icon">🗂️</span>
+    <span data-i18n="nav_categories">Categories</span>
+  </a>
+  <a class="bn-item" href="#" onclick="openSettings(); return false;">
+    <span class="bn-icon">⚙️</span>
+    <span data-i18n="nav_account">Account</span>
+  </a>
+  <a class="bn-item" href="#" onclick="openCart(); return false;">
+    <span class="bn-icon">🛍️</span>
+    <span data-i18n="nav_cart">Cart</span>
+    <span class="bn-badge" id="bottomCartBadge">0</span>
+  </a>
+</div>
 
 <!-- CART BOTTOM SHEET -->
 <div class="overlay" id="overlay" onclick="closeAll()"></div>
@@ -818,6 +863,7 @@ function removeFromCart(id){
 function updateCartBadge(){
   const count = Object.values(cart).reduce((a,b)=>a+b,0);
   document.getElementById('cartBadge').textContent = count;
+  document.getElementById('bottomCartBadge').textContent = count;
 }
 function cartTotal(){
   return Object.entries(cart).reduce((sum,[id,qty])=>{
@@ -1013,6 +1059,10 @@ const translations = {
     review_photo: "Photo (optional)",
     review_video: "Video (optional)",
     submit_review: "Submit Review",
+    nav_home: "Home",
+    nav_categories: "Categories",
+    nav_account: "Account",
+    nav_cart: "Cart",
   },
   hi: {
     search_ph: "ड्रेस, साड़ी, कुर्ती खोजें...",
@@ -1050,6 +1100,10 @@ const translations = {
     review_photo: "फोटो (वैकल्पिक)",
     review_video: "वीडियो (वैकल्पिक)",
     submit_review: "रिव्यू सबमिट करें",
+    nav_home: "होम",
+    nav_categories: "कैटेगरी",
+    nav_account: "अकाउंट",
+    nav_cart: "कार्ट",
   }
 };
 
