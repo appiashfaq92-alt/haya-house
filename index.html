@@ -65,13 +65,16 @@
     font-family:var(--font-body); font-size:0.85rem; background:transparent;
   }
   .logo{
-    font-family:var(--font-display);
-    font-weight:700; font-size:1.5rem;
-    color:var(--aubergine);
-    letter-spacing:2px;
-    text-transform:uppercase;
-    text-align:center;
+    display:flex; align-items:center; gap:8px; justify-content:center;
     white-space:nowrap;
+  }
+  .logo-badge{flex-shrink:0;}
+  .logo-text{
+    font-family:var(--font-display);
+    font-weight:700; font-size:1.35rem;
+    color:var(--aubergine);
+    letter-spacing:1px;
+    line-height:1;
   }
   .header-icons{display:flex; align-items:center; gap:10px; justify-self:end;}
   .icon-btn{
@@ -444,7 +447,7 @@
     .hero-img{order:-1; aspect-ratio:16/9;}
     .top-bar{grid-template-columns:auto 1fr auto;}
     .top-bar-search{display:none;}
-    .logo{font-size:1.1rem;}
+    .logo-text{font-size:1.1rem;}
   }
 </style>
 </head>
@@ -456,7 +459,14 @@
       <span>🔍</span>
       <input id="searchInput" data-i18n-ph="search_ph" placeholder="Search dresses, sarees, kurtis...">
     </div>
-    <div class="logo">Haya House</div>
+    <div class="logo">
+      <svg class="logo-badge" width="34" height="34" viewBox="0 0 76 76" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="38" cy="38" r="37" fill="none" stroke="var(--aubergine)" stroke-width="1.2"/>
+        <circle cx="38" cy="38" r="30" fill="var(--lilac)"/>
+        <text x="38" y="49" font-family="'Fraunces', serif" font-size="30" font-weight="700" fill="var(--aubergine)" text-anchor="middle">H</text>
+      </svg>
+      <span class="logo-text">Haya House</span>
+    </div>
     <div class="header-icons">
       <button class="icon-btn" onclick="openSettings()" title="Settings">⚙️</button>
       <button class="icon-btn" onclick="openQR()" title="QR Code">▦</button>
