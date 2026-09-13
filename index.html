@@ -433,6 +433,29 @@
   }
   .no-reviews-text{color:#c9bcc4; font-size:0.82rem; text-align:center; padding:10px 0;}
 
+  /* ORDER TRACKING */
+  .order-status-box{background:var(--lilac); padding:16px; text-align:left;}
+  .order-status-box .oid{font-weight:700; color:var(--aubergine); margin-bottom:4px;}
+  .order-status-box .oamt{font-size:0.85rem; color:#6b5a64; margin-bottom:14px;}
+  .status-stepper{display:flex; justify-content:space-between; position:relative;}
+  .status-stepper::before{
+    content:''; position:absolute; top:11px; left:5%; right:5%; height:2px; background:var(--line); z-index:0;
+  }
+  .step{display:flex; flex-direction:column; align-items:center; gap:4px; position:relative; z-index:1; flex:1;}
+  .step .dot{width:22px; height:22px; border-radius:50%; background:#fff; border:2px solid var(--line); display:flex; align-items:center; justify-content:center; font-size:0.7rem;}
+  .step.done .dot{background:var(--aubergine); border-color:var(--aubergine); color:#fff;}
+  .step span.label{font-size:0.62rem; color:#6b5a64; text-align:center;}
+  .step.done span.label{color:var(--aubergine); font-weight:600;}
+  .track-error{color:#a83a3a; font-size:0.85rem; text-align:center; padding:14px 0;}
+
+  .admin-order-card{
+    border:1px solid var(--line); border-radius:8px; padding:12px; margin-bottom:10px; text-align:left;
+  }
+  .admin-order-card .aoc-top{display:flex; justify-content:space-between; font-size:0.82rem; font-weight:700; color:var(--aubergine);}
+  .admin-order-card .aoc-info{font-size:0.78rem; color:#6b5a64; margin-top:4px; line-height:1.5;}
+  .admin-order-card select{margin-top:8px; padding:6px 10px; border:1px solid var(--line); font-size:0.8rem;}
+  .admin-order-card button{margin-top:8px; margin-left:8px; padding:6px 14px; background:var(--aubergine); color:#fff; border:none; font-size:0.78rem; border-radius:14px;}
+
   .star-picker{font-size:1.8rem; letter-spacing:6px; cursor:pointer; color:#d8cdd4;}
   .star-picker span.filled{color:#F0C24B;}
   #reviewModal{z-index:130;}
@@ -608,6 +631,32 @@
       <button class="pay-tab" id="themeLight" onclick="setTheme('light')" style="flex:0 0 auto; padding:10px 24px;">☀️ <span data-i18n="light_mode">Light</span></button>
       <button class="pay-tab" id="themeDark" onclick="setTheme('dark')" style="flex:0 0 auto; padding:10px 24px;">🌙 <span data-i18n="dark_mode">Dark</span></button>
     </div>
+    <div style="border-top:1px solid var(--line); margin-top:22px; padding-top:18px;">
+      <button class="pay-btn" style="background:var(--aubergine); margin-bottom:10px;" onclick="openTrackOrder()" data-i18n="track_order">📦 Track My Order</button>
+      <button class="pay-btn" style="background:#fff; color:var(--aubergine); border:1px solid var(--aubergine);" onclick="openAdminOrders()" data-i18n="manage_orders">🔐 Manage Orders (Owner)</button>
+    </div>
+  </div>
+</div>
+
+<!-- TRACK ORDER MODAL -->
+<div class="modal" id="trackOrderModal">
+  <div class="modal-box">
+    <button class="close-modal" onclick="closeAll()">×</button>
+    <h3 data-i18n="track_order">Track My Order</h3>
+    <div class="form-row"><label data-i18n="enter_order_id">Enter your Order ID</label><input id="trackOrderIdInput" placeholder="e.g. ORD12345678"></div>
+    <button class="pay-btn" style="background:var(--aubergine);" onclick="trackOrder()" data-i18n="track_btn">Track Order</button>
+    <div id="trackResult" style="margin-top:16px;"></div>
+  </div>
+</div>
+
+<!-- ADMIN ORDERS MODAL -->
+<div class="modal" id="adminOrdersModal">
+  <div class="modal-box" style="max-width:480px;">
+    <button class="close-modal" onclick="closeAll()">×</button>
+    <h3>Manage Orders</h3>
+    <div class="form-row"><label>Admin Key</label><input id="adminOrdersKey" type="password" placeholder="Store owner password"></div>
+    <button class="pay-btn" style="background:var(--aubergine);" onclick="loadAdminOrders()">Load Orders</button>
+    <div id="adminOrdersList" style="margin-top:16px; max-height:50vh; overflow-y:auto;"></div>
   </div>
 </div>
 
@@ -957,6 +1006,22 @@ function setupUpiQr(){
   document.getElementById('upiIdText').textContent = STORE_UPI_ID;
 }
 
+async function saveOrderToDb(orderId, name, phone, address, total, paymentMethod){
+  try{
+    const orderItems = Object.entries(cart).map(([id,qty])=>{
+      const p = PRODUCTS.find(x=>x.id==id);
+      return { id, name: p?.name, qty, price: p?.price };
+    });
+    await fetch('/api/orders', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ orderId, name, phone, address, items: orderItems, amount: total, paymentMethod, status: 'pending' })
+    });
+  }catch(e){
+    console.warn('Could not save order for tracking:', e.message);
+  }
+}
+
 function confirmCodOrder(){
   const name = document.getElementById('cName').value.trim();
   const phone = document.getElementById('cPhone').value.trim();
@@ -971,7 +1036,9 @@ function confirmCodOrder(){
     return;
   }
   if(!currentOrderId) currentOrderId = 'ORD' + Date.now().toString().slice(-8);
-  const msg = `New Cash on Delivery order: ${currentOrderId}\nAmount: ₹${total}\nName: ${name}\nPhone: ${phone}\nAddress: ${address}\nPlease confirm and prepare for delivery.`;
+  const orderIdForMsg = currentOrderId;
+  saveOrderToDb(orderIdForMsg, name, phone, address, total, 'cod');
+  const msg = `New Cash on Delivery order: ${orderIdForMsg}\nAmount: ₹${total}\nName: ${name}\nPhone: ${phone}\nAddress: ${address}\nPlease confirm and prepare for delivery.`;
   const waLink = `https://wa.me/${STORE_WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`;
   window.open(waLink, '_blank');
   cart = {};
@@ -979,7 +1046,7 @@ function confirmCodOrder(){
   updateCartBadge();
   renderProducts();
   closeAll();
-  alert("Order placed! Pay in cash when your order is delivered. We've noted your order — you'll be contacted for delivery confirmation.");
+  alert(`Order placed! Your Order ID is ${orderIdForMsg} — save this to track your order. Pay in cash when your order is delivered.`);
 }
 
 function confirmUpiPayment(){
@@ -995,7 +1062,9 @@ function confirmUpiPayment(){
     alert("Your bag is empty.");
     return;
   }
-  const msg = `Hi, I've paid ₹${total} for order ${currentOrderId} via UPI.\nName: ${name}\nPhone: ${phone}\nAddress: ${address}\nSending payment screenshot now.`;
+  const orderIdForMsg = currentOrderId;
+  saveOrderToDb(orderIdForMsg, name, phone, address, total, 'upi');
+  const msg = `Hi, I've paid ₹${total} for order ${orderIdForMsg} via UPI.\nName: ${name}\nPhone: ${phone}\nAddress: ${address}\nSending payment screenshot now.`;
   const waLink = `https://wa.me/${STORE_WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`;
   window.open(waLink, '_blank');
   cart = {};
@@ -1003,7 +1072,7 @@ function confirmUpiPayment(){
   updateCartBadge();
   renderProducts();
   closeAll();
-  alert("Order noted! Please send your payment screenshot on WhatsApp so we can confirm and ship your order.");
+  alert(`Order noted! Your Order ID is ${orderIdForMsg} — save this to track your order. Please send your payment screenshot on WhatsApp so we can confirm.`);
 }
 
 function openQR(){
@@ -1029,6 +1098,8 @@ function closeAll(){
   document.getElementById('addProductModal').classList.remove('show');
   document.getElementById('settingsModal').classList.remove('show');
   document.getElementById('reviewModal').classList.remove('show');
+  document.getElementById('trackOrderModal').classList.remove('show');
+  document.getElementById('adminOrdersModal').classList.remove('show');
 }
 
 /* ---------- LANGUAGE / SETTINGS ---------- */
@@ -1073,6 +1144,10 @@ const translations = {
     nav_categories: "Categories",
     nav_account: "Account",
     nav_cart: "Cart",
+    track_order: "Track My Order",
+    enter_order_id: "Enter your Order ID",
+    track_btn: "Track Order",
+    manage_orders: "Manage Orders (Owner)",
   },
   hi: {
     search_ph: "ड्रेस, साड़ी, कुर्ती खोजें...",
@@ -1114,6 +1189,10 @@ const translations = {
     nav_categories: "कैटेगरी",
     nav_account: "अकाउंट",
     nav_cart: "कार्ट",
+    track_order: "मेरा ऑर्डर ट्रैक करें",
+    enter_order_id: "अपनी ऑर्डर ID डालें",
+    track_btn: "ऑर्डर ट्रैक करें",
+    manage_orders: "ऑर्डर मैनेज करें (मालिक)",
   }
 };
 
@@ -1151,6 +1230,129 @@ function setTheme(theme){
 function updateThemeButtons(){
   document.getElementById('themeLight').classList.toggle('active', currentTheme==='light');
   document.getElementById('themeDark').classList.toggle('active', currentTheme==='dark');
+}
+
+/* ---------- ORDER TRACKING (CUSTOMER) ---------- */
+const ORDER_STEPS = [
+  {key:'pending', label:'Placed', icon:'📝'},
+  {key:'confirmed', label:'Confirmed', icon:'✅'},
+  {key:'shipped', label:'Shipped', icon:'🚚'},
+  {key:'delivered', label:'Delivered', icon:'📦'},
+];
+
+function openTrackOrder(){
+  document.getElementById('trackResult').innerHTML = '';
+  document.getElementById('trackOrderIdInput').value = '';
+  document.getElementById('overlay').classList.add('show');
+  document.getElementById('trackOrderModal').classList.add('show');
+}
+
+async function trackOrder(){
+  const orderId = document.getElementById('trackOrderIdInput').value.trim();
+  const resultEl = document.getElementById('trackResult');
+  if(!orderId){
+    resultEl.innerHTML = '<div class="track-error">Please enter your Order ID.</div>';
+    return;
+  }
+  resultEl.innerHTML = '<div class="no-reviews-text">Looking up your order...</div>';
+  try{
+    const res = await fetch(`/api/orders?orderId=${encodeURIComponent(orderId)}`);
+    if(!res.ok){
+      resultEl.innerHTML = '<div class="track-error">No order found with that ID. Please check and try again.</div>';
+      return;
+    }
+    const order = await res.json();
+
+    if(order.status === 'cancelled'){
+      resultEl.innerHTML = `<div class="order-status-box">
+        <div class="oid">${order.orderId}</div>
+        <div class="oamt">₹${order.amount} · This order was cancelled.</div>
+      </div>`;
+      return;
+    }
+
+    const currentIndex = ORDER_STEPS.findIndex(s => s.key === order.status);
+    const stepsHtml = ORDER_STEPS.map((s, i) => `
+      <div class="step ${i <= currentIndex ? 'done' : ''}">
+        <div class="dot">${i <= currentIndex ? '✓' : ''}</div>
+        <span class="label">${s.label}</span>
+      </div>
+    `).join('');
+
+    resultEl.innerHTML = `<div class="order-status-box">
+      <div class="oid">${order.orderId}</div>
+      <div class="oamt">₹${order.amount} · ${order.paymentMethod?.toUpperCase() || ''}</div>
+      <div class="status-stepper">${stepsHtml}</div>
+    </div>`;
+  }catch(e){
+    resultEl.innerHTML = '<div class="track-error">Could not check your order right now. Please try again shortly.</div>';
+  }
+}
+
+/* ---------- ORDER MANAGEMENT (ADMIN) ---------- */
+function openAdminOrders(){
+  document.getElementById('adminOrdersList').innerHTML = '';
+  document.getElementById('overlay').classList.add('show');
+  document.getElementById('adminOrdersModal').classList.add('show');
+}
+
+async function loadAdminOrders(){
+  const adminKey = document.getElementById('adminOrdersKey').value.trim();
+  const listEl = document.getElementById('adminOrdersList');
+  if(!adminKey){
+    listEl.innerHTML = '<div class="track-error">Please enter the Admin Key.</div>';
+    return;
+  }
+  listEl.innerHTML = '<div class="no-reviews-text">Loading orders...</div>';
+  try{
+    const res = await fetch('/api/orders?admin=1', {
+      headers: {'x-admin-key': adminKey}
+    });
+    if(res.status === 401){
+      listEl.innerHTML = '<div class="track-error">Wrong Admin Key.</div>';
+      return;
+    }
+    const orders = await res.json();
+    if(orders.length === 0){
+      listEl.innerHTML = '<div class="no-reviews-text">No orders yet.</div>';
+      return;
+    }
+    listEl.innerHTML = orders.map(o => `
+      <div class="admin-order-card">
+        <div class="aoc-top"><span>${o.orderId}</span><span>₹${o.amount}</span></div>
+        <div class="aoc-info">
+          ${o.name} · ${o.phone}<br>
+          ${o.address}<br>
+          Payment: ${o.paymentMethod?.toUpperCase() || '-'} · Status: <strong>${o.status}</strong>
+        </div>
+        <select id="status-${o.orderId}">
+          ${['pending','confirmed','shipped','delivered','cancelled'].map(s =>
+            `<option value="${s}" ${s===o.status?'selected':''}>${s}</option>`
+          ).join('')}
+        </select>
+        <button onclick="updateOrderStatus('${o.orderId}')">Update</button>
+      </div>
+    `).join('');
+  }catch(e){
+    listEl.innerHTML = '<div class="track-error">Could not load orders right now.</div>';
+  }
+}
+
+async function updateOrderStatus(orderId){
+  const adminKey = document.getElementById('adminOrdersKey').value.trim();
+  const newStatus = document.getElementById(`status-${orderId}`).value;
+  try{
+    const res = await fetch('/api/orders', {
+      method: 'PATCH',
+      headers: {'Content-Type':'application/json', 'x-admin-key': adminKey},
+      body: JSON.stringify({ orderId, status: newStatus })
+    });
+    if(!res.ok) throw new Error('update failed');
+    alert(`Order ${orderId} updated to "${newStatus}".`);
+    loadAdminOrders();
+  }catch(e){
+    alert('Could not update this order. Please try again.');
+  }
 }
 
 /* ---------- ADD YOUR OWN DRESS ---------- */
@@ -1541,6 +1743,8 @@ async function payWithRazorpay(){
     const p = PRODUCTS.find(x=>x.id==id);
     return { id, name: p?.name, qty, price: p?.price };
   });
+  if(!currentOrderId) currentOrderId = 'ORD' + Date.now().toString().slice(-8);
+  const orderIdForThis = currentOrderId;
 
   // Ask our backend to create the Razorpay order server-side — this is what
   // stops someone from tampering with the amount in their browser.
@@ -1579,7 +1783,7 @@ async function payWithRazorpay(){
               razorpay_order_id: response.razorpay_order_id,
               razorpay_payment_id: response.razorpay_payment_id,
               razorpay_signature: response.razorpay_signature,
-              customer: { name, phone, address, items: orderItems, amount: total }
+              customer: { orderId: orderIdForThis, name, phone, address, items: orderItems, amount: total }
             })
           });
           const verifyData = await verifyRes.json();
@@ -1594,9 +1798,11 @@ async function payWithRazorpay(){
         alert("Payment successful! (Test Mode)\\nPayment ID: " + response.razorpay_payment_id);
       }
       cart = {};
+      currentOrderId = null;
       updateCartBadge();
       renderProducts();
       closeAll();
+      alert(`Your Order ID is ${orderIdForThis} — save this to track your order anytime.`);
     }
   };
   try{
