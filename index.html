@@ -680,37 +680,6 @@
   </div>
 </div>
 
-<!-- ADD DRESS FAB -->
-<button class="add-fab" onclick="openAddProduct()" title="Add Your Dress">+</button>
-
-<!-- ADD DRESS MODAL -->
-<div class="modal" id="addProductModal">
-  <div class="modal-box">
-    <button class="close-modal" onclick="closeAll()">×</button>
-    <h3 data-i18n="add_dress">Add Your Dress</h3>
-    <div class="form-row"><label>Admin Key</label><input id="apAdminKey" type="password" placeholder="Store owner password"></div>
-    <div class="form-row"><label data-i18n="dress_name">Dress Name</label><input id="apName" placeholder="e.g. Pink Embroidered Anarkali"></div>
-    <div class="form-row">
-      <label>Category</label>
-      <select id="apCategory"></select>
-    </div>
-    <div class="form-row"><label>Selling Price (₹)</label><input id="apPrice" type="number" placeholder="1499"></div>
-    <div class="form-row"><label>MRP (₹) — optional</label><input id="apMrp" type="number" placeholder="1999"></div>
-    <div class="form-row">
-      <label data-i18n="dress_photo">Dress Photo</label>
-      <input id="apImage" type="file" accept="image/*">
-      <div class="file-hint">Required — this shows on the product card.</div>
-    </div>
-    <div class="form-row">
-      <label data-i18n="dress_video">Dress Video (optional)</label>
-      <input id="apVideo" type="file" accept="video/*">
-      <div class="file-hint">Optional — shown in the zoom/rotate viewer.</div>
-    </div>
-    <button class="pay-btn" id="apSubmitBtn" style="background:var(--aubergine);" onclick="submitAddProduct()">Add Dress to Store</button>
-    <p class="razorpay-note">This saves permanently to the store's database (visible to every visitor) once connected to the backend — see the setup guide. Only the store owner (who has the Admin Key) can add products.</p>
-  </div>
-</div>
-
 <!-- IMAGE/VIDEO VIEWER MODAL -->
 <div class="viewer-modal" id="viewerModal">
   <div class="viewer-top">
@@ -1095,17 +1064,11 @@ function openSettings(){
   updateLangButtons();
   updateThemeButtons();
 }
-function openAddProduct(){
-  populateCategorySelect();
-  document.getElementById('overlay').classList.add('show');
-  document.getElementById('addProductModal').classList.add('show');
-}
 function closeAll(){
   document.getElementById('overlay').classList.remove('show');
   document.getElementById('cartDrawer').classList.remove('show');
   document.getElementById('checkoutModal').classList.remove('show');
   document.getElementById('qrModal').classList.remove('show');
-  document.getElementById('addProductModal').classList.remove('show');
   document.getElementById('settingsModal').classList.remove('show');
   document.getElementById('reviewModal').classList.remove('show');
   document.getElementById('trackOrderModal').classList.remove('show');
@@ -1363,108 +1326,6 @@ async function updateOrderStatus(orderId){
   }catch(e){
     alert('Could not update this order. Please try again.');
   }
-}
-
-/* ---------- ADD YOUR OWN DRESS ---------- */
-function populateCategorySelect(){
-  const sel = document.getElementById('apCategory');
-  sel.innerHTML = categories.map(c => `<option value="${c}">${c}</option>`).join('')
-    + `<option value="__new__">+ New Category...</option>`;
-}
-async function submitAddProduct(){
-  const adminKey = document.getElementById('apAdminKey').value.trim();
-  const name = document.getElementById('apName').value.trim();
-  let category = document.getElementById('apCategory').value;
-  const price = parseInt(document.getElementById('apPrice').value);
-  const mrpInput = document.getElementById('apMrp').value;
-  const mrp = mrpInput ? parseInt(mrpInput) : Math.round(price*1.3);
-  const imgFile = document.getElementById('apImage').files[0];
-  const vidFile = document.getElementById('apVideo').files[0];
-
-  if(category === "__new__"){
-    category = prompt("Enter new category name:");
-    if(!category) return;
-    if(!categories.includes(category)){
-      categories.push(category);
-      categoryIcons[category] = "🆕";
-    }
-  }
-  if(!adminKey){
-    alert("Please enter the Admin Key — only the store owner can add products.");
-    return;
-  }
-  if(!name || !price || !imgFile){
-    alert("Please add a dress name, price, and photo — these are required.");
-    return;
-  }
-
-  const btn = document.getElementById('apSubmitBtn');
-  const originalLabel = btn.textContent;
-  btn.textContent = 'Uploading...';
-  btn.disabled = true;
-
-  try{
-    // 1) Upload photo (and video, if given) to Cloudinary
-    const imgUrl = await uploadToCloudinary(imgFile);
-    const vidUrl = vidFile ? await uploadToCloudinary(vidFile) : null;
-
-    // 2) Save the product to the database via our backend API
-    const res = await fetch('/api/products', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-admin-key': adminKey
-      },
-      body: JSON.stringify({ name, category, price, mrp, imageUrl: imgUrl, videoUrl: vidUrl })
-    });
-
-    if(res.status === 401){
-      alert("Wrong Admin Key — this dress was not added.");
-      return;
-    }
-    if(!res.ok) throw new Error('Backend save failed');
-
-    const saved = await res.json();
-    PRODUCTS.unshift({
-      id: saved._id, name: saved.name, category: saved.category,
-      price: saved.price, mrp: saved.mrp, img: saved.imageUrl, video: saved.videoUrl, fromDb: true
-    });
-
-    resetAddProductForm();
-    activeCategory = "All";
-    visibleCount = Math.max(visibleCount, 20);
-    renderCatNav();
-    renderLatestStrip();
-    renderProducts();
-    closeAll();
-    alert("Your dress has been added to the store — it's now live for every visitor!");
-
-  } catch(err){
-    console.warn('Backend not connected yet, saving locally for this session only.', err.message);
-    // Fallback: backend/Cloudinary not set up yet — keep the demo usable.
-    const imgUrl = URL.createObjectURL(imgFile);
-    const vidUrl = vidFile ? URL.createObjectURL(vidFile) : null;
-    PRODUCTS.unshift({ id: idCounter++, name, category, price, mrp, img: imgUrl, video: vidUrl });
-    resetAddProductForm();
-    activeCategory = "All";
-    renderCatNav();
-    renderLatestStrip();
-    renderProducts();
-    closeAll();
-    alert("Backend isn't connected yet, so this dress is only visible in this browser tab for now (see the setup guide to make it permanent).");
-  } finally {
-    btn.textContent = originalLabel;
-    btn.disabled = false;
-  }
-}
-
-function resetAddProductForm(){
-  document.getElementById('apAdminKey').value = '';
-  document.getElementById('apName').value = '';
-  document.getElementById('apPrice').value = '';
-  document.getElementById('apMrp').value = '';
-  document.getElementById('apImage').value = '';
-  document.getElementById('apVideo').value = '';
 }
 
 async function uploadToCloudinary(file){
