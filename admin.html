@@ -191,7 +191,8 @@
     </div>
     <div class="form-row"><label>Selling Price (₹)</label><input id="pmPrice" type="number" placeholder="1499"></div>
     <div class="form-row"><label>MRP (₹)</label><input id="pmMrp" type="number" placeholder="1999"></div>
-    <div class="form-row"><label>Photo</label><input id="pmImageFile" type="file" accept="image/*"></div>
+    <div class="form-row"><label>Photos (up to 4)</label><input id="pmImageFile" type="file" accept="image/*" multiple></div>
+    <div class="file-hint" style="font-size:0.72rem; color:#8a7680; margin-top:-8px; margin-bottom:12px;">Leave empty when editing to keep existing photos.</div>
     <div class="form-row"><label>Video (optional)</label><input id="pmVideoFile" type="file" accept="video/*"></div>
     <div class="modal-actions">
       <button class="btn-sm" style="flex:1;" onclick="closeProductModal()">Cancel</button>
@@ -341,15 +342,15 @@ async function saveProduct(){
   const category = document.getElementById('pmCategory').value;
   const price = parseInt(document.getElementById('pmPrice').value);
   const mrp = document.getElementById('pmMrp').value ? parseInt(document.getElementById('pmMrp').value) : undefined;
-  const imgFile = document.getElementById('pmImageFile').files[0];
+  const imgFiles = Array.from(document.getElementById('pmImageFile').files).slice(0, 4);
   const vidFile = document.getElementById('pmVideoFile').files[0];
 
   if(!name || !price){
     alert('Name and price are required.');
     return;
   }
-  if(!id && !imgFile){
-    alert('Please choose a photo for a new product.');
+  if(!id && imgFiles.length === 0){
+    alert('Please choose at least one photo for a new product.');
     return;
   }
 
@@ -357,13 +358,18 @@ async function saveProduct(){
   btn.textContent = 'Saving...'; btn.disabled = true;
 
   try{
-    let imageUrl, videoUrl;
-    if(imgFile) imageUrl = await uploadToCloudinary(imgFile);
+    let images, videoUrl;
+    if(imgFiles.length > 0){
+      images = [];
+      for(const file of imgFiles){
+        images.push(await uploadToCloudinary(file));
+      }
+    }
     if(vidFile) videoUrl = await uploadToCloudinary(vidFile);
 
     if(id){
       const body = { id, name, category, price, mrp };
-      if(imageUrl) body.imageUrl = imageUrl;
+      if(images) body.images = images;
       if(videoUrl) body.videoUrl = videoUrl;
       const res = await fetch('/api/products', {
         method: 'PUT',
@@ -375,7 +381,7 @@ async function saveProduct(){
       const res = await fetch('/api/products', {
         method: 'POST',
         headers: {'Content-Type':'application/json', 'x-admin-key': adminKey},
-        body: JSON.stringify({ name, category, price, mrp, imageUrl, videoUrl })
+        body: JSON.stringify({ name, category, price, mrp, images, videoUrl })
       });
       if(!res.ok) throw new Error('create failed');
     }

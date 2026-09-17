@@ -393,6 +393,21 @@
   .viewer-stage video{
     max-width:92%; max-height:82%;
   }
+  .gallery-arrow{
+    position:absolute; top:50%; transform:translateY(-50%); z-index:5;
+    width:40px; height:40px; border-radius:50%;
+    background:rgba(255,255,255,0.15); color:#fff; border:1px solid rgba(255,255,255,0.3);
+    font-size:1.6rem; line-height:1; display:flex; align-items:center; justify-content:center;
+  }
+  .gallery-arrow-left{left:10px;}
+  .gallery-arrow-right{right:10px;}
+  .gallery-dots{
+    display:flex; justify-content:center; gap:7px; padding:4px 0 2px;
+  }
+  .gallery-dots .dot-btn{
+    width:7px; height:7px; border-radius:50%; background:rgba(255,255,255,0.35); border:none; padding:0;
+  }
+  .gallery-dots .dot-btn.active{background:#fff;}
   .viewer-controls{
     display:flex; justify-content:center; gap:14px;
     padding:16px 20px 26px;
@@ -687,9 +702,12 @@
     <button class="close-viewer" onclick="closeViewer()">×</button>
   </div>
   <div class="viewer-stage" id="viewerStage">
+    <button class="gallery-arrow gallery-arrow-left" id="galleryPrevBtn" onclick="viewerGalleryNav(-1)" style="display:none;">‹</button>
     <img id="viewerImg" alt="">
     <video id="viewerVideo" controls style="display:none;"></video>
+    <button class="gallery-arrow gallery-arrow-right" id="galleryNextBtn" onclick="viewerGalleryNav(1)" style="display:none;">›</button>
   </div>
+  <div class="gallery-dots" id="galleryDots" style="display:none;"></div>
   <div class="viewer-controls">
     <button class="vc-btn" onclick="viewerZoom(-0.25)" title="Zoom out">−</button>
     <button class="vc-btn" onclick="viewerZoom(0.25)" title="Zoom in">+</button>
@@ -775,7 +793,8 @@ async function loadProducts(){
     PRODUCTS = dbProducts.map(p => ({
       id: p._id, name: p.name, category: p.category,
       price: p.price, mrp: p.mrp || Math.round(p.price*1.3),
-      img: p.imageUrl, video: p.videoUrl, fromDb: true
+      img: p.imageUrl, images: (p.images && p.images.length ? p.images : [p.imageUrl]),
+      video: p.videoUrl, fromDb: true
     }));
   } catch(e){
     console.warn('Backend not reachable — showing local demo products as a fallback.', e.message);
@@ -1470,18 +1489,17 @@ async function submitReview(){
 /* ---------- IMAGE / VIDEO VIEWER (zoom, rotate, pan) ---------- */
 let viewerState = {scale:1, rotate:0, tx:0, ty:0, showingVideo:false};
 let currentViewerProduct = null;
+let currentImageIndex = 0;
 
 function openViewer(id){
   const p = PRODUCTS.find(x=>x.id==id);
   if(!p) return;
   currentViewerProduct = p;
+  currentImageIndex = 0;
   viewerState = {scale:1, rotate:0, tx:0, ty:0, showingVideo:false};
 
   document.getElementById('viewerName').textContent = p.name;
-  const img = document.getElementById('viewerImg');
   const vid = document.getElementById('viewerVideo');
-  img.src = p.img;
-  img.style.display = 'block';
   vid.style.display = 'none';
   vid.pause();
 
@@ -1489,10 +1507,53 @@ function openViewer(id){
   toggleBtn.style.display = p.video ? 'flex' : 'none';
   toggleBtn.textContent = '🎬 Video';
 
+  renderGalleryImage();
   applyViewerTransform();
   document.getElementById('viewerModal').classList.add('show');
   loadReviews(p.id);
 }
+
+function renderGalleryImage(){
+  const p = currentViewerProduct;
+  const images = (p.images && p.images.length) ? p.images : [p.img];
+  const img = document.getElementById('viewerImg');
+  img.src = images[currentImageIndex];
+  img.style.display = 'block';
+  document.getElementById('viewerVideo').style.display = 'none';
+  viewerState.showingVideo = false;
+
+  const prevBtn = document.getElementById('galleryPrevBtn');
+  const nextBtn = document.getElementById('galleryNextBtn');
+  const dotsEl = document.getElementById('galleryDots');
+
+  if(images.length > 1){
+    prevBtn.style.display = 'flex';
+    nextBtn.style.display = 'flex';
+    dotsEl.style.display = 'flex';
+    dotsEl.innerHTML = images.map((_, i) =>
+      `<button class="dot-btn ${i===currentImageIndex?'active':''}" onclick="goToImage(${i})"></button>`
+    ).join('');
+  } else {
+    prevBtn.style.display = 'none';
+    nextBtn.style.display = 'none';
+    dotsEl.style.display = 'none';
+  }
+}
+
+function viewerGalleryNav(direction){
+  const p = currentViewerProduct;
+  const images = (p.images && p.images.length) ? p.images : [p.img];
+  currentImageIndex = (currentImageIndex + direction + images.length) % images.length;
+  viewerReset();
+  renderGalleryImage();
+}
+
+function goToImage(i){
+  currentImageIndex = i;
+  viewerReset();
+  renderGalleryImage();
+}
+
 function closeViewer(){
   document.getElementById('viewerVideo').pause();
   document.getElementById('viewerModal').classList.remove('show');
