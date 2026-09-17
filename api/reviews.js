@@ -1,12 +1,28 @@
 const connectDB = require('../lib/mongodb');
 const Review = require('../models/Review');
 
+function checkAdmin(req, res){
+  const adminKey = req.headers['x-admin-key'];
+  if (!process.env.ADMIN_KEY || adminKey !== process.env.ADMIN_KEY) {
+    res.status(401).json({ error: 'Unauthorized' });
+    return false;
+  }
+  return true;
+}
+
 module.exports = async (req, res) => {
   try {
     await connectDB();
 
     if (req.method === 'GET') {
-      const { productId } = req.query || {};
+      const { productId, admin } = req.query || {};
+
+      if (admin) {
+        if (!checkAdmin(req, res)) return;
+        const reviews = await Review.find().sort({ createdAt: -1 }).limit(300);
+        return res.status(200).json(reviews);
+      }
+
       if (!productId) {
         return res.status(400).json({ error: 'productId is required' });
       }
@@ -29,7 +45,16 @@ module.exports = async (req, res) => {
       return res.status(201).json(review);
     }
 
-    res.setHeader('Allow', ['GET', 'POST']);
+    if (req.method === 'DELETE') {
+      if (!checkAdmin(req, res)) return;
+      const { id } = req.query || {};
+      if (!id) return res.status(400).json({ error: 'id is required' });
+      const deleted = await Review.findByIdAndDelete(id);
+      if (!deleted) return res.status(404).json({ error: 'Review not found' });
+      return res.status(200).json({ success: true });
+    }
+
+    res.setHeader('Allow', ['GET', 'POST', 'DELETE']);
     return res.status(405).json({ error: `Method ${req.method} not allowed` });
   } catch (err) {
     console.error('reviews.js error:', err);

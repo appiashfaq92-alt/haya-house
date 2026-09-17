@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Haya House — Admin Panel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#221419; --aubergine:#5A4B7A; --ivory:#FFFFEF;
+    --clay:#A892C8; --lilac:#E6D8E8; --line:rgba(90,75,122,0.18);
+    --card-bg:#ffffff;
+    --font-display:'Fraunces', serif; --font-body:'Inter', sans-serif;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    font-family:var(--font-body); background:var(--ivory); color:var(--ink);
+    min-height:100vh;
+  }
+  a{color:inherit;}
+  button{font-family:inherit; cursor:pointer;}
+  input, select, textarea{font-family:inherit;}
+
+  /* LOGIN SCREEN */
+  #loginScreen{
+    min-height:100vh; display:flex; align-items:center; justify-content:center; padding:20px;
+  }
+  .login-box{
+    background:#fff; padding:36px 28px; max-width:380px; width:100%;
+    border:1px solid var(--line); text-align:center;
+  }
+  .login-box h1{font-family:var(--font-display); color:var(--aubergine); font-size:1.6rem; margin-bottom:6px;}
+  .login-box p{font-size:0.85rem; color:#6b5a64; margin-bottom:20px;}
+  .login-box input{
+    width:100%; padding:12px 14px; border:1px solid var(--line); font-size:0.95rem; margin-bottom:14px; outline:none;
+  }
+  .login-box button{
+    width:100%; padding:13px; background:var(--aubergine); color:#fff; border:none; font-weight:700; font-size:0.95rem;
+  }
+  .login-error{color:#a83a3a; font-size:0.82rem; margin-top:10px; display:none;}
+
+  /* ADMIN SHELL */
+  #adminShell{display:none;}
+  header{
+    background:var(--aubergine); color:#fff;
+    padding:16px 20px; display:flex; justify-content:space-between; align-items:center;
+  }
+  header h1{font-family:var(--font-display); font-size:1.3rem; font-weight:600;}
+  header button{
+    background:rgba(255,255,255,0.15); color:#fff; border:1px solid rgba(255,255,255,0.4);
+    padding:7px 16px; border-radius:16px; font-size:0.8rem; font-weight:600;
+  }
+
+  .tabs{
+    display:flex; background:#fff; border-bottom:1px solid var(--line);
+    overflow-x:auto;
+  }
+  .tab-btn{
+    flex:1; padding:14px 8px; background:none; border:none; font-weight:600; font-size:0.85rem;
+    color:#8a7680; border-bottom:3px solid transparent; white-space:nowrap;
+  }
+  .tab-btn.active{color:var(--aubergine); border-bottom-color:var(--aubergine);}
+
+  .panel{display:none; padding:20px; max-width:900px; margin:0 auto;}
+  .panel.active{display:block;}
+
+  /* DASHBOARD */
+  .stats-grid{display:grid; grid-template-columns:repeat(2,1fr); gap:14px; margin-bottom:20px;}
+  .stat-card{
+    background:#fff; border:1px solid var(--line); padding:18px; text-align:center;
+  }
+  .stat-card .num{font-family:var(--font-display); font-size:1.8rem; font-weight:700; color:var(--aubergine);}
+  .stat-card .label{font-size:0.78rem; color:#6b5a64; margin-top:4px;}
+  .status-breakdown{background:#fff; border:1px solid var(--line); padding:16px;}
+  .status-breakdown h3{font-size:0.95rem; margin-bottom:12px; color:var(--aubergine); font-family:var(--font-display);}
+  .status-row{display:flex; justify-content:space-between; padding:7px 0; border-bottom:1px solid var(--line); font-size:0.85rem;}
+  .status-row:last-child{border-bottom:none;}
+
+  /* SHARED LIST CARD */
+  .list-card{
+    background:#fff; border:1px solid var(--line); border-radius:8px; padding:14px; margin-bottom:12px;
+  }
+  .list-card-top{display:flex; justify-content:space-between; align-items:flex-start; gap:10px;}
+  .list-card-title{font-weight:700; font-size:0.92rem; color:var(--ink);}
+  .list-card-sub{font-size:0.78rem; color:#8a7680; margin-top:2px;}
+  .list-card img{width:56px; height:70px; object-fit:cover; border-radius:6px; flex-shrink:0;}
+  .list-card-actions{display:flex; gap:8px; margin-top:10px;}
+  .btn-sm{
+    padding:6px 14px; font-size:0.76rem; font-weight:600; border-radius:14px; border:1px solid var(--line); background:#fff;
+  }
+  .btn-sm.danger{color:#a83a3a; border-color:#e3bcbc;}
+  .btn-sm.primary{background:var(--aubergine); color:#fff; border:none;}
+  select.status-select{padding:6px 10px; font-size:0.8rem; border:1px solid var(--line);}
+
+  .top-actions{display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;}
+  .top-actions h2{font-family:var(--font-display); color:var(--aubergine); font-size:1.2rem;}
+
+  .empty-msg{text-align:center; color:#8a7680; padding:40px 20px; font-size:0.88rem;}
+  .loading-msg{text-align:center; color:#8a7680; padding:20px; font-size:0.85rem;}
+
+  /* MODAL FOR ADD/EDIT PRODUCT */
+  .modal-overlay{
+    position:fixed; inset:0; background:rgba(34,20,25,0.4); z-index:200;
+    display:none; align-items:center; justify-content:center; padding:20px;
+  }
+  .modal-overlay.show{display:flex;}
+  .modal-card{
+    background:#fff; max-width:420px; width:100%; padding:24px; max-height:90vh; overflow-y:auto;
+  }
+  .modal-card h3{font-family:var(--font-display); color:var(--aubergine); margin-bottom:16px;}
+  .form-row{margin-bottom:12px;}
+  .form-row label{font-size:0.78rem; font-weight:600; color:#4a3a45; display:block; margin-bottom:5px;}
+  .form-row input, .form-row select, .form-row textarea{
+    width:100%; padding:10px 12px; border:1px solid var(--line); font-size:0.9rem; outline:none;
+  }
+  .modal-actions{display:flex; gap:10px; margin-top:16px;}
+  .modal-actions button{flex:1; padding:11px; font-weight:600; font-size:0.85rem;}
+  .modal-close{float:right; font-size:1.3rem; color:#8a7680; background:none; border:none;}
+</style>
+</head>
+<body>
+
+<!-- LOGIN SCREEN -->
+<div id="loginScreen">
+  <div class="login-box">
+    <h1>Haya House</h1>
+    <p>Admin Panel — enter your Admin Key to continue</p>
+    <input id="loginKey" type="password" placeholder="Admin Key">
+    <button onclick="doLogin()">Login</button>
+    <div class="login-error" id="loginError">Wrong Admin Key. Please try again.</div>
+  </div>
+</div>
+
+<!-- ADMIN SHELL -->
+<div id="adminShell">
+  <header>
+    <h1>Haya House Admin</h1>
+    <button onclick="doLogout()">Logout</button>
+  </header>
+
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="dashboard" onclick="switchTab('dashboard')">📊 Dashboard</button>
+    <button class="tab-btn" data-tab="products" onclick="switchTab('products')">👗 Products</button>
+    <button class="tab-btn" data-tab="orders" onclick="switchTab('orders')">📦 Orders</button>
+    <button class="tab-btn" data-tab="reviews" onclick="switchTab('reviews')">⭐ Reviews</button>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div class="panel active" id="panel-dashboard">
+    <div class="top-actions"><h2>Overview</h2></div>
+    <div id="dashboardContent" class="loading-msg">Loading stats...</div>
+  </div>
+
+  <!-- PRODUCTS -->
+  <div class="panel" id="panel-products">
+    <div class="top-actions">
+      <h2>Products</h2>
+      <button class="btn-sm primary" onclick="openProductModal()">+ Add Product</button>
+    </div>
+    <div id="productsContent" class="loading-msg">Loading products...</div>
+  </div>
+
+  <!-- ORDERS -->
+  <div class="panel" id="panel-orders">
+    <div class="top-actions"><h2>Orders</h2></div>
+    <div id="ordersContent" class="loading-msg">Loading orders...</div>
+  </div>
+
+  <!-- REVIEWS -->
+  <div class="panel" id="panel-reviews">
+    <div class="top-actions"><h2>Reviews</h2></div>
+    <div id="reviewsContent" class="loading-msg">Loading reviews...</div>
+  </div>
+</div>
+
+<!-- ADD/EDIT PRODUCT MODAL -->
+<div class="modal-overlay" id="productModal">
+  <div class="modal-card">
+    <button class="modal-close" onclick="closeProductModal()">×</button>
+    <h3 id="productModalTitle">Add Product</h3>
+    <input type="hidden" id="pmId">
+    <div class="form-row"><label>Dress Name</label><input id="pmName" placeholder="e.g. Pink Embroidered Anarkali"></div>
+    <div class="form-row">
+      <label>Category</label>
+      <select id="pmCategory">
+        <option>Sarees</option><option>Kurtis & Suits</option><option>Western Dresses</option>
+        <option>Party Wear</option><option>Casual Wear</option><option>Ethnic Gowns</option>
+        <option>Plus Size</option><option>Accessories</option>
+      </select>
+    </div>
+    <div class="form-row"><label>Selling Price (₹)</label><input id="pmPrice" type="number" placeholder="1499"></div>
+    <div class="form-row"><label>MRP (₹)</label><input id="pmMrp" type="number" placeholder="1999"></div>
+    <div class="form-row"><label>Photo</label><input id="pmImageFile" type="file" accept="image/*"></div>
+    <div class="form-row"><label>Video (optional)</label><input id="pmVideoFile" type="file" accept="video/*"></div>
+    <div class="modal-actions">
+      <button class="btn-sm" style="flex:1;" onclick="closeProductModal()">Cancel</button>
+      <button class="btn-sm primary" id="pmSaveBtn" style="flex:1;" onclick="saveProduct()">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const CLOUDINARY_CLOUD_NAME = "iu5hhx12";
+const CLOUDINARY_UPLOAD_PRESET = "haya_house_uploads";
+
+let adminKey = '';
+
+function doLogin(){
+  const key = document.getElementById('loginKey').value.trim();
+  if(!key){ return; }
+  adminKey = key;
+  // Validate by trying the stats endpoint
+  fetch('/api/admin-stats', { headers: {'x-admin-key': adminKey} })
+    .then(res => {
+      if(res.status === 401){
+        document.getElementById('loginError').style.display = 'block';
+        adminKey = '';
+        return;
+      }
+      document.getElementById('loginScreen').style.display = 'none';
+      document.getElementById('adminShell').style.display = 'block';
+      loadDashboard();
+    })
+    .catch(() => {
+      document.getElementById('loginError').style.display = 'block';
+    });
+}
+
+function doLogout(){
+  adminKey = '';
+  document.getElementById('loginKey').value = '';
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('adminShell').style.display = 'none';
+}
+
+function switchTab(tab){
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  document.querySelectorAll('.panel').forEach(p => p.classList.toggle('active', p.id === 'panel-' + tab));
+  if(tab === 'dashboard') loadDashboard();
+  if(tab === 'products') loadProducts();
+  if(tab === 'orders') loadOrders();
+  if(tab === 'reviews') loadReviews();
+}
+
+/* ---------- DASHBOARD ---------- */
+async function loadDashboard(){
+  const el = document.getElementById('dashboardContent');
+  el.innerHTML = '<div class="loading-msg">Loading stats...</div>';
+  try{
+    const res = await fetch('/api/admin-stats', { headers: {'x-admin-key': adminKey} });
+    const s = await res.json();
+    el.innerHTML = `
+      <div class="stats-grid">
+        <div class="stat-card"><div class="num">${s.productCount}</div><div class="label">Products</div></div>
+        <div class="stat-card"><div class="num">${s.orderCount}</div><div class="label">Total Orders</div></div>
+        <div class="stat-card"><div class="num">₹${s.totalRevenue}</div><div class="label">Revenue</div></div>
+        <div class="stat-card"><div class="num">${s.reviewCount}</div><div class="label">Reviews</div></div>
+      </div>
+      <div class="status-breakdown">
+        <h3>Orders by Status</h3>
+        ${Object.entries(s.ordersByStatus).map(([k,v]) => `<div class="status-row"><span>${k}</span><span>${v}</span></div>`).join('')}
+      </div>
+    `;
+  }catch(e){
+    el.innerHTML = '<div class="empty-msg">Could not load stats.</div>';
+  }
+}
+
+/* ---------- PRODUCTS ---------- */
+let allProducts = [];
+async function loadProducts(){
+  const el = document.getElementById('productsContent');
+  el.innerHTML = '<div class="loading-msg">Loading products...</div>';
+  try{
+    const res = await fetch('/api/products');
+    allProducts = await res.json();
+    if(allProducts.length === 0){
+      el.innerHTML = '<div class="empty-msg">No products yet. Add your first dress!</div>';
+      return;
+    }
+    el.innerHTML = allProducts.map(p => `
+      <div class="list-card">
+        <div class="list-card-top">
+          <img src="${p.imageUrl}" alt="${p.name}">
+          <div style="flex:1;">
+            <div class="list-card-title">${p.name}</div>
+            <div class="list-card-sub">${p.category} · ₹${p.price} ${p.mrp ? `(MRP ₹${p.mrp})` : ''}</div>
+          </div>
+        </div>
+        <div class="list-card-actions">
+          <button class="btn-sm" onclick="editProduct('${p._id}')">Edit</button>
+          <button class="btn-sm danger" onclick="deleteProduct('${p._id}')">Delete</button>
+        </div>
+      </div>
+    `).join('');
+  }catch(e){
+    el.innerHTML = '<div class="empty-msg">Could not load products.</div>';
+  }
+}
+
+function openProductModal(){
+  document.getElementById('productModalTitle').textContent = 'Add Product';
+  document.getElementById('pmId').value = '';
+  document.getElementById('pmName').value = '';
+  document.getElementById('pmCategory').selectedIndex = 0;
+  document.getElementById('pmPrice').value = '';
+  document.getElementById('pmMrp').value = '';
+  document.getElementById('pmImageFile').value = '';
+  document.getElementById('pmVideoFile').value = '';
+  document.getElementById('productModal').classList.add('show');
+}
+function closeProductModal(){
+  document.getElementById('productModal').classList.remove('show');
+}
+function editProduct(id){
+  const p = allProducts.find(x => x._id === id);
+  if(!p) return;
+  document.getElementById('productModalTitle').textContent = 'Edit Product';
+  document.getElementById('pmId').value = p._id;
+  document.getElementById('pmName').value = p.name;
+  document.getElementById('pmCategory').value = p.category;
+  document.getElementById('pmPrice').value = p.price;
+  document.getElementById('pmMrp').value = p.mrp || '';
+  document.getElementById('productModal').classList.add('show');
+}
+
+async function uploadToCloudinary(file){
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+  const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/upload`, { method:'POST', body:formData });
+  if(!res.ok) throw new Error('Cloudinary upload failed');
+  const data = await res.json();
+  return data.secure_url;
+}
+
+async function saveProduct(){
+  const id = document.getElementById('pmId').value;
+  const name = document.getElementById('pmName').value.trim();
+  const category = document.getElementById('pmCategory').value;
+  const price = parseInt(document.getElementById('pmPrice').value);
+  const mrp = document.getElementById('pmMrp').value ? parseInt(document.getElementById('pmMrp').value) : undefined;
+  const imgFile = document.getElementById('pmImageFile').files[0];
+  const vidFile = document.getElementById('pmVideoFile').files[0];
+
+  if(!name || !price){
+    alert('Name and price are required.');
+    return;
+  }
+  if(!id && !imgFile){
+    alert('Please choose a photo for a new product.');
+    return;
+  }
+
+  const btn = document.getElementById('pmSaveBtn');
+  btn.textContent = 'Saving...'; btn.disabled = true;
+
+  try{
+    let imageUrl, videoUrl;
+    if(imgFile) imageUrl = await uploadToCloudinary(imgFile);
+    if(vidFile) videoUrl = await uploadToCloudinary(vidFile);
+
+    if(id){
+      const body = { id, name, category, price, mrp };
+      if(imageUrl) body.imageUrl = imageUrl;
+      if(videoUrl) body.videoUrl = videoUrl;
+      const res = await fetch('/api/products', {
+        method: 'PUT',
+        headers: {'Content-Type':'application/json', 'x-admin-key': adminKey},
+        body: JSON.stringify(body)
+      });
+      if(!res.ok) throw new Error('update failed');
+    } else {
+      const res = await fetch('/api/products', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json', 'x-admin-key': adminKey},
+        body: JSON.stringify({ name, category, price, mrp, imageUrl, videoUrl })
+      });
+      if(!res.ok) throw new Error('create failed');
+    }
+    closeProductModal();
+    loadProducts();
+  }catch(e){
+    alert('Could not save product. Please try again.');
+  } finally {
+    btn.textContent = 'Save'; btn.disabled = false;
+  }
+}
+
+async function deleteProduct(id){
+  if(!confirm('Delete this product? This cannot be undone.')) return;
+  try{
+    const res = await fetch(`/api/products?id=${id}`, {
+      method: 'DELETE',
+      headers: {'x-admin-key': adminKey}
+    });
+    if(!res.ok) throw new Error('delete failed');
+    loadProducts();
+  }catch(e){
+    alert('Could not delete this product.');
+  }
+}
+
+/* ---------- ORDERS ---------- */
+async function loadOrders(){
+  const el = document.getElementById('ordersContent');
+  el.innerHTML = '<div class="loading-msg">Loading orders...</div>';
+  try{
+    const res = await fetch('/api/orders?admin=1', { headers: {'x-admin-key': adminKey} });
+    const orders = await res.json();
+    if(orders.length === 0){
+      el.innerHTML = '<div class="empty-msg">No orders yet.</div>';
+      return;
+    }
+    el.innerHTML = orders.map(o => `
+      <div class="list-card">
+        <div class="list-card-top">
+          <div style="flex:1;">
+            <div class="list-card-title">${o.orderId} · ₹${o.amount}</div>
+            <div class="list-card-sub">${o.name} · ${o.phone}<br>${o.address}<br>Payment: ${(o.paymentMethod||'-').toUpperCase()}</div>
+          </div>
+        </div>
+        <div class="list-card-actions">
+          <select class="status-select" id="ord-status-${o.orderId}">
+            ${['pending','confirmed','shipped','delivered','cancelled'].map(s =>
+              `<option value="${s}" ${s===o.status?'selected':''}>${s}</option>`
+            ).join('')}
+          </select>
+          <button class="btn-sm primary" onclick="updateOrder('${o.orderId}')">Update</button>
+        </div>
+      </div>
+    `).join('');
+  }catch(e){
+    el.innerHTML = '<div class="empty-msg">Could not load orders.</div>';
+  }
+}
+
+async function updateOrder(orderId){
+  const status = document.getElementById(`ord-status-${orderId}`).value;
+  try{
+    const res = await fetch('/api/orders', {
+      method: 'PATCH',
+      headers: {'Content-Type':'application/json', 'x-admin-key': adminKey},
+      body: JSON.stringify({ orderId, status })
+    });
+    if(!res.ok) throw new Error('update failed');
+    alert(`Order ${orderId} updated to "${status}".`);
+    loadOrders();
+  }catch(e){
+    alert('Could not update this order.');
+  }
+}
+
+/* ---------- REVIEWS ---------- */
+async function loadReviews(){
+  const el = document.getElementById('reviewsContent');
+  el.innerHTML = '<div class="loading-msg">Loading reviews...</div>';
+  try{
+    const res = await fetch('/api/reviews?admin=1', { headers: {'x-admin-key': adminKey} });
+    const reviews = await res.json();
+    if(reviews.length === 0){
+      el.innerHTML = '<div class="empty-msg">No reviews yet.</div>';
+      return;
+    }
+    el.innerHTML = reviews.map(r => `
+      <div class="list-card">
+        <div class="list-card-top">
+          <div style="flex:1;">
+            <div class="list-card-title">${r.name} — ${'★'.repeat(r.rating)}${'☆'.repeat(5-r.rating)}</div>
+            <div class="list-card-sub">${r.comment || '(no comment)'}<br>Product ID: ${r.productId}</div>
+          </div>
+        </div>
+        <div class="list-card-actions">
+          <button class="btn-sm danger" onclick="deleteReview('${r._id}')">Delete</button>
+        </div>
+      </div>
+    `).join('');
+  }catch(e){
+    el.innerHTML = '<div class="empty-msg">Could not load reviews.</div>';
+  }
+}
+
+async function deleteReview(id){
+  if(!confirm('Delete this review?')) return;
+  try{
+    const res = await fetch(`/api/reviews?id=${id}`, {
+      method: 'DELETE',
+      headers: {'x-admin-key': adminKey}
+    });
+    if(!res.ok) throw new Error('delete failed');
+    loadReviews();
+  }catch(e){
+    alert('Could not delete this review.');
+  }
+}
+</script>
+</body>
+</html>
