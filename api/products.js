@@ -21,7 +21,7 @@ module.exports = async (req, res) => {
 
     if (req.method === 'POST') {
       if (!checkAdmin(req, res)) return;
-      const { name, category, price, mrp, images, videoUrl, sizes } = req.body || {};
+      const { name, category, price, mrp, images, videoUrl, sizes, colors, stock } = req.body || {};
       const imageList = Array.isArray(images) ? images.filter(Boolean).slice(0, 4) : [];
       if (!name || !category || !price || imageList.length === 0) {
         return res.status(400).json({ error: 'name, category, price and at least one image are required' });
@@ -32,13 +32,15 @@ module.exports = async (req, res) => {
         images: imageList,
         videoUrl,
         sizes: Array.isArray(sizes) ? sizes : [],
+        colors: Array.isArray(colors) ? colors : [],
+        stock: (stock === '' || stock === undefined) ? null : Number(stock),
       });
       return res.status(201).json(product);
     }
 
     if (req.method === 'PUT') {
       if (!checkAdmin(req, res)) return;
-      const { id, name, category, price, mrp, images, videoUrl, sizes } = req.body || {};
+      const { id, name, category, price, mrp, images, videoUrl, sizes, colors, stock } = req.body || {};
       if (!id) return res.status(400).json({ error: 'id is required' });
 
       const update = { name, category, price, mrp, videoUrl };
@@ -47,9 +49,9 @@ module.exports = async (req, res) => {
         update.images = imageList;
         update.imageUrl = imageList[0];
       }
-      if (Array.isArray(sizes)) {
-        update.sizes = sizes;
-      }
+      if (Array.isArray(sizes)) update.sizes = sizes;
+      if (Array.isArray(colors)) update.colors = colors;
+      if (stock !== undefined) update.stock = (stock === '' || stock === null) ? null : Number(stock);
 
       const updated = await Product.findByIdAndUpdate(id, update, { new: true, runValidators: true });
       if (!updated) return res.status(404).json({ error: 'Product not found' });

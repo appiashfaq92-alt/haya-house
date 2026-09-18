@@ -201,6 +201,14 @@
         <label style="display:flex; align-items:center; gap:4px; font-weight:400; font-size:0.85rem;"><input type="checkbox" value="XXL"> XXL</label>
       </div>
     </div>
+    <div class="form-row">
+      <label>Available Colors (comma-separated)</label>
+      <input id="pmColors" placeholder="e.g. Red, Blue, Maroon">
+    </div>
+    <div class="form-row">
+      <label>Stock (leave empty for unlimited)</label>
+      <input id="pmStock" type="number" placeholder="e.g. 5 — shows Sold Out at 0">
+    </div>
     <div class="form-row"><label>Photos (up to 4)</label><input id="pmImageFile" type="file" accept="image/*" multiple></div>
     <div class="file-hint" style="font-size:0.72rem; color:#8a7680; margin-top:-8px; margin-bottom:12px;">Leave empty when editing to keep existing photos.</div>
     <div class="form-row"><label>Video (optional)</label><input id="pmVideoFile" type="file" accept="video/*"></div>
@@ -290,13 +298,19 @@ async function loadProducts(){
       el.innerHTML = '<div class="empty-msg">No products yet. Add your first dress!</div>';
       return;
     }
-    el.innerHTML = allProducts.map(p => `
+    el.innerHTML = allProducts.map(p => {
+      const stockLabel = (p.stock === null || p.stock === undefined)
+        ? ''
+        : p.stock === 0 ? ' · <strong style="color:#a83a3a;">SOLD OUT</strong>' : ` · Stock: ${p.stock}`;
+      return `
       <div class="list-card">
         <div class="list-card-top">
           <img src="${p.imageUrl}" alt="${p.name}">
           <div style="flex:1;">
             <div class="list-card-title">${p.name}</div>
-            <div class="list-card-sub">${p.category} · ₹${p.price} ${p.mrp ? `(MRP ₹${p.mrp})` : ''}</div>
+            <div class="list-card-sub">${p.category} · ₹${p.price} ${p.mrp ? `(MRP ₹${p.mrp})` : ''}${stockLabel}</div>
+            ${p.sizes && p.sizes.length ? `<div class="list-card-sub">Sizes: ${p.sizes.join(', ')}</div>` : ''}
+            ${p.colors && p.colors.length ? `<div class="list-card-sub">Colors: ${p.colors.join(', ')}</div>` : ''}
           </div>
         </div>
         <div class="list-card-actions">
@@ -304,7 +318,8 @@ async function loadProducts(){
           <button class="btn-sm danger" onclick="deleteProduct('${p._id}')">Delete</button>
         </div>
       </div>
-    `).join('');
+    `;
+    }).join('');
   }catch(e){
     el.innerHTML = '<div class="empty-msg">Could not load products.</div>';
   }
@@ -317,6 +332,8 @@ function openProductModal(){
   document.getElementById('pmCategory').selectedIndex = 0;
   document.getElementById('pmPrice').value = '';
   document.getElementById('pmMrp').value = '';
+  document.getElementById('pmColors').value = '';
+  document.getElementById('pmStock').value = '';
   document.getElementById('pmImageFile').value = '';
   document.getElementById('pmVideoFile').value = '';
   document.querySelectorAll('#pmSizes input[type=checkbox]').forEach(cb => cb.checked = false);
@@ -334,6 +351,8 @@ function editProduct(id){
   document.getElementById('pmCategory').value = p.category;
   document.getElementById('pmPrice').value = p.price;
   document.getElementById('pmMrp').value = p.mrp || '';
+  document.getElementById('pmColors').value = (p.colors || []).join(', ');
+  document.getElementById('pmStock').value = (p.stock === null || p.stock === undefined) ? '' : p.stock;
   const productSizes = p.sizes || [];
   document.querySelectorAll('#pmSizes input[type=checkbox]').forEach(cb => {
     cb.checked = productSizes.includes(cb.value);
@@ -358,6 +377,9 @@ async function saveProduct(){
   const price = parseInt(document.getElementById('pmPrice').value);
   const mrp = document.getElementById('pmMrp').value ? parseInt(document.getElementById('pmMrp').value) : undefined;
   const sizes = Array.from(document.querySelectorAll('#pmSizes input[type=checkbox]:checked')).map(cb => cb.value);
+  const colors = document.getElementById('pmColors').value.split(',').map(c => c.trim()).filter(Boolean);
+  const stockRaw = document.getElementById('pmStock').value;
+  const stock = stockRaw === '' ? null : parseInt(stockRaw);
   const imgFiles = Array.from(document.getElementById('pmImageFile').files).slice(0, 4);
   const vidFile = document.getElementById('pmVideoFile').files[0];
 
@@ -384,7 +406,7 @@ async function saveProduct(){
     if(vidFile) videoUrl = await uploadToCloudinary(vidFile);
 
     if(id){
-      const body = { id, name, category, price, mrp, sizes };
+      const body = { id, name, category, price, mrp, sizes, colors, stock };
       if(images) body.images = images;
       if(videoUrl) body.videoUrl = videoUrl;
       const res = await fetch('/api/products', {
@@ -397,7 +419,7 @@ async function saveProduct(){
       const res = await fetch('/api/products', {
         method: 'POST',
         headers: {'Content-Type':'application/json', 'x-admin-key': adminKey},
-        body: JSON.stringify({ name, category, price, mrp, images, videoUrl, sizes })
+        body: JSON.stringify({ name, category, price, mrp, images, videoUrl, sizes, colors, stock })
       });
       if(!res.ok) throw new Error('create failed');
     }
