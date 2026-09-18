@@ -6,11 +6,10 @@ const ProductSchema = new mongoose.Schema(
     category: { type: String, required: true },
     price: { type: Number, required: true },
     mrp: { type: Number },
-    // Up to 4 photos per dress. imageUrl is kept as the primary/first photo
-    // for backward compatibility with older products saved before this field existed.
     imageUrl: { type: String, required: true },
     images: { type: [String], default: [] },
     videoUrl: { type: String, default: null },
+    sizes: { type: [String], default: [] }, // e.g. ["S","M","L","XL","XXL"]
   },
   { timestamps: true }
 );

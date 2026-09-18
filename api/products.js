@@ -21,7 +21,7 @@ module.exports = async (req, res) => {
 
     if (req.method === 'POST') {
       if (!checkAdmin(req, res)) return;
-      const { name, category, price, mrp, images, videoUrl } = req.body || {};
+      const { name, category, price, mrp, images, videoUrl, sizes } = req.body || {};
       const imageList = Array.isArray(images) ? images.filter(Boolean).slice(0, 4) : [];
       if (!name || !category || !price || imageList.length === 0) {
         return res.status(400).json({ error: 'name, category, price and at least one image are required' });
@@ -31,13 +31,14 @@ module.exports = async (req, res) => {
         imageUrl: imageList[0],
         images: imageList,
         videoUrl,
+        sizes: Array.isArray(sizes) ? sizes : [],
       });
       return res.status(201).json(product);
     }
 
     if (req.method === 'PUT') {
       if (!checkAdmin(req, res)) return;
-      const { id, name, category, price, mrp, images, videoUrl } = req.body || {};
+      const { id, name, category, price, mrp, images, videoUrl, sizes } = req.body || {};
       if (!id) return res.status(400).json({ error: 'id is required' });
 
       const update = { name, category, price, mrp, videoUrl };
@@ -45,6 +46,9 @@ module.exports = async (req, res) => {
         const imageList = images.filter(Boolean).slice(0, 4);
         update.images = imageList;
         update.imageUrl = imageList[0];
+      }
+      if (Array.isArray(sizes)) {
+        update.sizes = sizes;
       }
 
       const updated = await Product.findByIdAndUpdate(id, update, { new: true, runValidators: true });

@@ -191,6 +191,16 @@
     </div>
     <div class="form-row"><label>Selling Price (₹)</label><input id="pmPrice" type="number" placeholder="1499"></div>
     <div class="form-row"><label>MRP (₹)</label><input id="pmMrp" type="number" placeholder="1999"></div>
+    <div class="form-row">
+      <label>Available Sizes</label>
+      <div id="pmSizes" style="display:flex; gap:8px; flex-wrap:wrap;">
+        <label style="display:flex; align-items:center; gap:4px; font-weight:400; font-size:0.85rem;"><input type="checkbox" value="S"> S</label>
+        <label style="display:flex; align-items:center; gap:4px; font-weight:400; font-size:0.85rem;"><input type="checkbox" value="M"> M</label>
+        <label style="display:flex; align-items:center; gap:4px; font-weight:400; font-size:0.85rem;"><input type="checkbox" value="L"> L</label>
+        <label style="display:flex; align-items:center; gap:4px; font-weight:400; font-size:0.85rem;"><input type="checkbox" value="XL"> XL</label>
+        <label style="display:flex; align-items:center; gap:4px; font-weight:400; font-size:0.85rem;"><input type="checkbox" value="XXL"> XXL</label>
+      </div>
+    </div>
     <div class="form-row"><label>Photos (up to 4)</label><input id="pmImageFile" type="file" accept="image/*" multiple></div>
     <div class="file-hint" style="font-size:0.72rem; color:#8a7680; margin-top:-8px; margin-bottom:12px;">Leave empty when editing to keep existing photos.</div>
     <div class="form-row"><label>Video (optional)</label><input id="pmVideoFile" type="file" accept="video/*"></div>
@@ -309,6 +319,7 @@ function openProductModal(){
   document.getElementById('pmMrp').value = '';
   document.getElementById('pmImageFile').value = '';
   document.getElementById('pmVideoFile').value = '';
+  document.querySelectorAll('#pmSizes input[type=checkbox]').forEach(cb => cb.checked = false);
   document.getElementById('productModal').classList.add('show');
 }
 function closeProductModal(){
@@ -323,6 +334,10 @@ function editProduct(id){
   document.getElementById('pmCategory').value = p.category;
   document.getElementById('pmPrice').value = p.price;
   document.getElementById('pmMrp').value = p.mrp || '';
+  const productSizes = p.sizes || [];
+  document.querySelectorAll('#pmSizes input[type=checkbox]').forEach(cb => {
+    cb.checked = productSizes.includes(cb.value);
+  });
   document.getElementById('productModal').classList.add('show');
 }
 
@@ -342,6 +357,7 @@ async function saveProduct(){
   const category = document.getElementById('pmCategory').value;
   const price = parseInt(document.getElementById('pmPrice').value);
   const mrp = document.getElementById('pmMrp').value ? parseInt(document.getElementById('pmMrp').value) : undefined;
+  const sizes = Array.from(document.querySelectorAll('#pmSizes input[type=checkbox]:checked')).map(cb => cb.value);
   const imgFiles = Array.from(document.getElementById('pmImageFile').files).slice(0, 4);
   const vidFile = document.getElementById('pmVideoFile').files[0];
 
@@ -368,7 +384,7 @@ async function saveProduct(){
     if(vidFile) videoUrl = await uploadToCloudinary(vidFile);
 
     if(id){
-      const body = { id, name, category, price, mrp };
+      const body = { id, name, category, price, mrp, sizes };
       if(images) body.images = images;
       if(videoUrl) body.videoUrl = videoUrl;
       const res = await fetch('/api/products', {
@@ -381,7 +397,7 @@ async function saveProduct(){
       const res = await fetch('/api/products', {
         method: 'POST',
         headers: {'Content-Type':'application/json', 'x-admin-key': adminKey},
-        body: JSON.stringify({ name, category, price, mrp, images, videoUrl })
+        body: JSON.stringify({ name, category, price, mrp, images, videoUrl, sizes })
       });
       if(!res.ok) throw new Error('create failed');
     }
